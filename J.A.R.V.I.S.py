@@ -10,6 +10,8 @@ import psutil
 import time
 import threading
 import glob
+import subprocess
+import os
 
 # Initialize
 recognizer = sr.Recognizer()
@@ -42,6 +44,89 @@ with sr.Microphone() as source:
     recognizer.adjust_for_ambient_noise(source, duration=1)
 
 print("Microphone ready.")
+
+def open_app(app):
+    apps = {
+        "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        "google chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        "edge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        "notepad": "notepad.exe",
+        "calculator": "calc.exe",
+        "paint": "mspaint.exe",
+        "explorer": "explorer.exe",
+        "command prompt": "cmd.exe",
+        "cmd": "cmd.exe"
+    }
+
+    app = app.lower().strip()
+
+    if app in apps:
+        try:
+            subprocess.Popen(apps[app])
+            speak(f"Opening {app}")
+        except Exception as e:
+            print(e)
+            speak("I could not open that application.")
+    else:
+        speak("I don't know that application yet.")
+
+def open_folder(folder_name):
+    try:
+        folders = {
+            "desktop": "Desktop",
+            "downloads": "Downloads",
+            "documents": "Documents",
+            "pictures": "Pictures",
+            "videos": "Videos",
+            "music": "Music"
+        }
+
+        folder_name = folder_name.lower().strip()
+
+        if folder_name in folders:
+            subprocess.Popen(["explorer.exe", folders[folder_name]])
+            speak("Opening " + folder_name)
+        else:
+            speak("Folder not found.")
+
+    except Exception as e:
+        print("Folder Error:", e)
+        speak("Something went wrong.")
+
+def create_folder(folder_name):
+    try:
+        folder_name = folder_name.strip()
+
+        if not folder_name:
+            speak("Please provide a folder name.")
+            return
+
+        desktop = r"C:\Users\shahh\OneDrive\Desktop"
+        folder_path = os.path.join(desktop, folder_name)
+
+        os.makedirs(folder_path, exist_ok=True)
+
+        print("Created:", folder_path)
+        speak("Folder " + folder_name + " created on the desktop.")
+
+    except Exception as e:
+        print("Create Folder Error:", e)
+        speak("I could not create the folder.")
+
+def open_named_folder(folder_name):
+    try:
+        base_path = r"C:\Users\shahh\OneDrive\Desktop"
+        folder_path = os.path.join(base_path, folder_name)
+
+        if os.path.exists(folder_path):
+            os.startfile(folder_path)
+            speak("Opening " + folder_name)
+        else:
+            speak("I could not find the folder " + folder_name)
+
+    except Exception as e:
+        print("Open Folder Error:", e)
+        speak("Something went wrong.")
 
 while True:
 
@@ -155,6 +240,51 @@ while True:
         elif "open vs code" in command:
             speak("Opening Visual Studio Code")
             os.system("code")
+
+        elif "open chrome" in command:
+            open_app("chrome")
+
+        elif "open edge" in command:
+            open_app("edge")
+
+        elif "open notepad" in command:
+            open_app("notepad")
+
+        elif "open calculator" in command:
+            open_app("calculator")
+
+        elif "open paint" in command:
+            open_app("paint")
+
+        elif "open explorer" in command:
+            open_app("explorer")
+
+        elif "open command prompt" in command or "open cmd" in command:
+            open_app("cmd")
+
+        elif "open documents" in command:
+            open_folder("documents")
+
+        elif "open desktop" in command:
+            open_folder("desktop")
+
+        elif "open pictures" in command:
+            open_folder("pictures")
+
+        elif "open videos" in command:
+            open_folder("videos")
+
+        elif "open music" in command:
+            open_folder("music")
+
+        elif "create folder" in command:
+            folder_name = command.replace("create folder", "").strip()
+            create_folder(folder_name)
+
+        elif "open folder" in command:
+            folder_name = command.replace("open folder", "").strip()
+            open_named_folder(folder_name)
+
     #Screenshot
         elif "take screenshot" in command:
             image = pyautogui.screenshot()
@@ -516,7 +646,6 @@ while True:
                 print("Text file error:", e)
                 speak("I could not create the text file.")
 
-                        # Write to Text File
                # Write to Text File
         elif (
             "write to" in command
