@@ -11,7 +11,8 @@ import time
 import threading
 import glob
 import subprocess
-import os
+import shutil
+import pygetwindow as gw
 
 # Initialize
 recognizer = sr.Recognizer()
@@ -29,9 +30,7 @@ print("      JARVIS AI ASSISTANT")
 print("===================================")
 speak("Jarvis is online.")
 
- # Initialize
-recognizer = sr.Recognizer()
-engine = pyttsx3.init()
+
 
 # Improve microphone recognition
 recognizer.energy_threshold = 300
@@ -127,6 +126,66 @@ def open_named_folder(folder_name):
     except Exception as e:
         print("Open Folder Error:", e)
         speak("Something went wrong.")
+
+def close_app(app):
+    apps = {
+        "chrome": "chrome.exe",
+        "google chrome": "chrome.exe",
+        "edge": "msedge.exe",
+        "notepad": "notepad.exe",
+        "calculator": "CalculatorApp.exe",
+        "paint": "mspaint.exe",
+        "explorer": "explorer.exe",
+        "command prompt": "cmd.exe",
+        "cmd": "cmd.exe",
+        "vs code": "Code.exe",
+        "youtube": "chrome.exe"
+    }
+
+    app = app.lower().strip()
+
+    if app in apps:
+        try:
+            subprocess.run(
+                ["taskkill", "/IM", apps[app], "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+
+            speak(f"Closing {app}")
+
+        except Exception as e:
+            print("Close App Error:", e)
+            speak("I could not close that application.")
+
+    else:
+        speak("I don't know that application yet.")
+
+def switch_app(app_name):
+    try:
+        windows = gw.getAllWindows()
+        app_name = app_name.lower().strip()
+
+        for window in windows:
+            title = window.title.lower()
+
+            if app_name in title and window.title.strip():
+
+                if window.isMinimized:
+                    window.restore()
+
+                window.activate()
+
+                speak("Switched to " + app_name)
+                print("Active window:", window.title)
+
+                return
+
+        speak("I could not find that application open.")
+
+    except Exception as e:
+        print("Switch App Error:", e)
+        speak("I could not switch to that application.")
 
 while True:
 
@@ -241,6 +300,7 @@ while True:
             speak("Opening Visual Studio Code")
             os.system("code")
 
+
         elif "open chrome" in command:
             open_app("chrome")
 
@@ -284,6 +344,20 @@ while True:
         elif "open folder" in command:
             folder_name = command.replace("open folder", "").strip()
             open_named_folder(folder_name)
+
+        # Switch Application
+        elif "switch to" in command:
+            app_name = command.replace("switch to", "").strip()
+
+            if app_name:
+                switch_app(app_name)
+            else:
+                speak("Please tell me which application to switch to.")
+
+    # Close Application
+        elif "close " in command:
+            app = command.replace("close ", "").strip()
+            close_app(app)
 
     #Screenshot
         elif "take screenshot" in command:
@@ -910,8 +984,194 @@ while True:
             except Exception as e:
                 print("Move file error:", e)
                 speak("I could not move the file.")
-         
-        # Exit
+
+                # Copy File
+        elif "copy file" in command:
+            try:
+                text = command.replace("copy file", "").strip()
+
+                if " to " not in text:
+                    speak("Please say the file name and destination folder.")
+                    continue
+
+                filename, folder_name = text.split(" to ", 1)
+
+                filename = filename.strip()
+                folder_name = folder_name.strip()
+
+                if not filename or not folder_name:
+                    speak("Please provide both names.")
+                    continue
+
+                if not filename.endswith(".txt"):
+                    filename += ".txt"
+
+                # Your actual Desktop
+                desktop = r"C:\Users\shahh\OneDrive\Desktop"
+
+                # Find source file directly on Desktop
+                source = os.path.join(desktop, filename)
+
+                if not os.path.isfile(source):
+                    speak("I could not find that file on the desktop.")
+                    print("Looking for:", source)
+                    continue
+
+                # Find destination folder on Desktop
+                destination = os.path.join(desktop, folder_name)
+
+                print("Source:", source)
+                print("Destination:", destination)
+
+                if not os.path.isdir(destination):
+                    speak("I could not find the destination folder.")
+                    continue
+
+                new_path = os.path.join(destination, filename)
+
+                if os.path.exists(new_path):
+                    speak("That file already exists in the destination folder.")
+                    continue
+
+                shutil.copy2(source, new_path)
+
+                print("Copied successfully:")
+                print(source)
+                print("To:")
+                print(new_path)
+
+                speak("File copied successfully.")
+
+            except Exception as e:
+                print("Copy file error:", e)
+                speak("I could not copy the file.")
+
+                        # Delete File with Voice Confirmation
+        elif "delete file" in command:
+            try:
+                filename = command.replace("delete file", "").strip()
+
+                if not filename:
+                    speak("Please tell me the file name.")
+                    continue
+
+                if not filename.endswith(".txt"):
+                    filename += ".txt"
+
+                desktop = r"C:\Users\shahh\OneDrive\Desktop"
+                filepath = os.path.join(desktop, filename)
+
+                # Check file
+                if not os.path.isfile(filepath):
+                    speak("I could not find that file on the desktop.")
+                    print("File not found:", filepath)
+                    continue
+
+                # Confirmation
+                speak(
+                    "I found " + filename +
+                    ". Say one to delete it, or two to cancel."
+                )
+
+                print("\n================================")
+                print("DELETE CONFIRMATION")
+                print("Say: ONE = Delete")
+                print("Say: TWO = Cancel")
+                print("================================")
+
+                with sr.Microphone() as source:
+
+                    try:
+                        audio = recognizer.listen(
+                            source,
+                            timeout=7,
+                            phrase_time_limit=5
+                        )
+
+                    except sr.WaitTimeoutError:
+                        speak("No response received. Deletion cancelled.")
+                        continue
+
+                try:
+                    confirmation = recognizer.recognize_google(audio).lower().strip()
+
+                    print("Confirmation heard:", confirmation)
+
+                except sr.UnknownValueError:
+                    speak("I could not understand your response. Deletion cancelled.")
+                    continue
+
+                # DELETE
+                if (
+                    "one" in confirmation
+                    or "1" in confirmation
+                    or "won" in confirmation
+                    or "want" in confirmation
+                ):
+
+                    try:
+                        os.remove(filepath)
+
+                        print("Deleted:", filepath)
+                        speak("File deleted successfully.")
+
+                    except PermissionError:
+                        speak("I do not have permission to delete that file.")
+
+                    except Exception as e:
+                        print("Delete error:", e)
+                        speak("I could not delete the file.")
+
+                # CANCEL
+                elif (
+                    "two" in confirmation
+                    or "2" in confirmation
+                    or "to" in confirmation
+                    or "too" in confirmation
+                    or "no" in confirmation
+                ):
+
+                    print("Deletion cancelled.")
+                    speak("Deletion cancelled.")
+
+                else:
+                    print("Unknown response:", confirmation)
+                    speak("I did not understand. Deletion cancelled.")
+
+            except Exception as e:
+                print("Delete file error:", e)
+                speak("Something went wrong while deleting the file.")
+
+                    # Keyboard Shortcuts
+        elif command == "copy":
+            pyautogui.hotkey("ctrl", "c")
+            speak("Copied.")
+
+        elif command == "paste":
+            pyautogui.hotkey("ctrl", "v")
+            speak("Pasted.")
+
+        elif command == "save":
+            pyautogui.hotkey("ctrl", "s")
+            speak("Saved.")
+
+        elif command == "undo":
+            pyautogui.hotkey("ctrl", "z")
+            speak("Undo.")
+
+        elif command == "redo":
+            pyautogui.hotkey("ctrl", "y")
+            speak("Redo.")
+
+        elif command == "select all":
+            pyautogui.hotkey("ctrl", "a")
+            speak("Selected all.")
+
+        elif command == "cut":
+            pyautogui.hotkey("ctrl", "x")
+            speak("Cut.")
+                
+# Exit
         elif "exit" in command or "goodbye" in command:
             speak("Goodbye Sir.")
             break
